@@ -2,12 +2,25 @@
 
 [german_plurals.syn](https://github.com/dvorberg/tsearch2-synonym-dicts/raw/refs/heads/main/german_plurals.syn) — Mapping “irregular” German plurals to their singular lemma.
 
+These are [tsearch2](https://www.postgresql.org/docs/15/textsearch.html) Synonym Dictionaries to be used in full text search configurations. Refer to the PostgreSQL documentation to learn how to use them. In my example I place `german_plurals.syn` in the tsearch2 data directory (on Debian `/usr/share/postgresql/15/tsearch_data/`) and execute on my database:
+
+```sql
+CREATE TEXT SEARCH DICTIONARY german_plurals
+   (template=synonym, synonyms='german_plurals');
+
+ALTER TEXT SEARCH CONFIGURATION german
+    ALTER MAPPING FOR asciiword, asciihword, hword_asciipart,
+                      word, hword, hword_part
+    WITH german_plurals, german_hunspell, pg_catalog.german_stem;
+```
+
+The linguistic data was extracted from [Wiktionary Project](http://wiktionary.org) data dumps using the SQL and Python scripts in this repository. 
 
 ### “Irregular” German Plurals
 
-Iʼm running a full text index using PostgreSQLʼs brilliant `tsearch2` engine containing German as well as English texts. I employ the `hunspel` dictionary easily provided by a Debian package, in conjunction with the `german_stem` Snowball implementation shipped with the RDBMS. That alone yields acceptable results. 
+Iʼm running a full text index using PostgreSQLʼs brilliant `tsearch2` engine containing German as well as English texts. I employ the `hunspel` dictionary easily provided by a Debian package, in conjunction with the `german_stem` Snowball implementation shipped with PostgreSQL. That alone yields acceptable results. 
 
-I ran into a problem that some German plurals are not reduced correctly to their (singular) lemma:
+I ran into a problem that some German plurals are not reduced to their (singular) lemma correctly:
 
 ```sql
 t4w=# SELECT ts_lexize('german_hunspell', 'Gott');
@@ -50,7 +63,9 @@ psql t4w -q -A -F ' ' -f german_synonym_dict_query.sql > german_plurals.syn
 
 And thatʼs the file you may download above. 
 
-On my 2017 iMac this query over 197204 rows yielding 161103 entries takes less than 3 seconds. Impressive! The resulting list is very large because the source material contains many compound nouns. Most of these are, in all probability, very low frequency. They will use up RAM on you database server with most entries seeing very little use. But hey: That server, in all likelihood, has Gigabytes of RAM and I ainʼt got no time to sort that list by word frequency. And it works well!
+You must **remove** the `german_plurals` synonym dictionary from your search configuration to run that query again! Otherwise it will yield an empty result, because all your plurals will be stemmed correctly. 
+
+On my 2017 iMac this query over 197204 rows yielding 161103 entries takes less than 3 seconds. Impressive! The resulting list is very large because the source material contains many compound nouns. Most of these are, in all probability, very low frequency. They will use up RAM on you database server with most entries seeing very little use. But hey: That server, in all likelihood, has Gigabytes of RAM and I ainʼt got no time to sort that list by word frequency. And it works fine!
 
 ```sql
 t4w=# SELECT to_tsvector('german', 

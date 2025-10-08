@@ -1,5 +1,6 @@
-## Downloads
+### Downloads
 
+[german_plurals.syn](https://github.com/dvorberg/tsearch2-synonym-dicts/raw/refs/heads/main/german_plurals.syn) — Mapping “irregular” German plurals to their singular lemma.
 
 
 ### “Irregular” German Plurals
@@ -24,7 +25,7 @@ t4w=# SELECT ts_lexize('german_hunspell', 'Götter');
 
 Those ought to be identical. Hunspell is a spell checker and has only found a secondary use here as a linguistic helper in full text indexing. The solution is a list of German nouns in both singular and plural. Easy. 
 
-The wonderful [Wiktionary Project](http://wiktionary.org) provides such information for German and many other languages. They provide downloadable [dumps of their](https://de.wiktionary.org/wiki/Wiktionary:Download) data in XML format. (Ah, what a time to be alive! With all the enshitification going on this is such a breath of fresh air. But I digress…) I created a namespace and a table in the database with my current `tsearch2` configuration:
+The wonderful [Wiktionary Project](http://wiktionary.org) provides such information for German and many other languages. They provide downloadable [dumps of their data](https://de.wiktionary.org/wiki/Wiktionary:Download) in XML format. (Ah, what a time to be alive! With all the enshitification going on this is such a breath of fresh air. But I digress…) I created a namespace and a table in the database with my current `tsearch2` configuration:
 
 ```sql
 CREATE SCHEMA wordlist;
@@ -47,19 +48,20 @@ Now itʼs time to run `german_synonym_dict_query.sql` and save the result in a s
 psql t4w -q -A -F ' ' -f german_synonym_dict_query.sql > german_plurals.syn
 ```
 
-And thatʼs the file you may download here. 
+And thatʼs the file you may download above. 
 
 On my 2017 iMac this query over 197204 rows yielding 161103 entries takes less than 3 seconds. Impressive! The resulting list is very large because the source material contains many compound nouns. Most of these are, in all probability, very low frequency. They will use up RAM on you database server with most entries seeing very little use. But hey: That server, in all likelihood, has Gigabytes of RAM and I ainʼt got no time to sort that list by word frequency. And it works well!
 
 ```sql
-t4w=# SELECT to_tsvector('german', 'Ach, ihr Götter! große Götter
+t4w=# SELECT to_tsvector('german', 
+'Ach, ihr Götter! große Götter 
 In dem weiten Himmel droben!
 Gäbet ihr uns auf der Erde
 Festen Sinn und guten Mut,
 O wir ließen euch, ihr Guten,
 Euren weiten Himmel droben! 
 — Goethe');
-    
--- yields: 'ach':1 'droben':10,31 'erde':16 'erden':16 'fest':17 'goethe':32 'gott':3,5 'groß':4 'gut':20,27 'gäbe':11 'himmel':9,30 'ließ':24 'mut':21 'o':22 'sinn':18 'weit':8,29 'weite':8,29 'weiten':8,29
 ```
+
+Yields: 'ach':1 'droben':10,31 'erde':16 'erden':16 'fest':17 'goethe':32 **'gott':3,5** 'groß':4 'gut':20,27 'gäbe':11 'himmel':9,30 'ließ':24 'mut':21 'o':22 'sinn':18 'weit':8,29 'weite':8,29 'weiten':8,29
 

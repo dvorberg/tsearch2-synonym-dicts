@@ -2,7 +2,9 @@
 
 [german_plurals.syn](https://github.com/dvorberg/tsearch2-synonym-dicts/raw/refs/heads/main/german_plurals.syn) — Mapping “irregular” German plurals to their singular lemma.
 
-These are [tsearch2](https://www.postgresql.org/docs/15/textsearch.html) Synonym Dictionaries to be used in full text search configurations. Refer to the PostgreSQL documentation to learn how to use them. In my example I place `german_plurals.syn` in the tsearch2 data directory (on Debian `/usr/share/postgresql/15/tsearch_data/`) and execute on my database:
+[english_plirals.syn](https://github.com/dvorberg/tsearch2-synonym-dicts/raw/refs/heads/main/english_plurals.syn) – Archaic English spellings and irregular plurals
+
+These are [tsearch2](https://www.postgresql.org/docs/current/textsearch.html) Synonym Dictionaries to be used in full text search configurations. Refer to the PostgreSQL documentation chapter [12.6.3](https://www.postgresql.org/docs/current/textsearch-dictionaries.html#TEXTSEARCH-SYNONYM-DICTIONARY) to learn how to set up and use them. In my example I place `german_plurals.syn` in the tsearch2 data directory (on Debian `/usr/share/postgresql/15/tsearch_data/`) and execute on my database:
 
 ```sql
 CREATE TEXT SEARCH DICTIONARY german_plurals
@@ -14,7 +16,7 @@ ALTER TEXT SEARCH CONFIGURATION german
     WITH german_plurals, german_hunspell, pg_catalog.german_stem;
 ```
 
-The linguistic data was extracted from [Wiktionary Project](http://wiktionary.org) data dumps using the SQL and Python scripts in this repository. 
+The linguistic data was extracted from [Wiktionary Project](http://wiktionary.org) XML data using the SQL and Python scripts in this repository. 
 
 ### “Irregular” German Plurals
 
@@ -38,7 +40,7 @@ t4w=# SELECT ts_lexize('german_hunspell', 'Götter');
 
 Those ought to be identical. Hunspell is a spell checker and has only found a secondary use here as a linguistic helper in full text indexing. The solution is a list of German nouns in both singular and plural. Easy. 
 
-The wonderful [Wiktionary Project](http://wiktionary.org) provides such information for German and many other languages. They provide downloadable [dumps of their data](https://de.wiktionary.org/wiki/Wiktionary:Download) in XML format. (Ah, what a time to be alive! With all the enshitification going on this is such a breath of fresh air. But I digress…) I created a namespace and a table in the database with my current `tsearch2` configuration:
+The wonderful [Wiktionary Project](http://wiktionary.org) provides this type of information for German and many other languages. They provide downloadable [dumps of their data](https://de.wiktionary.org/wiki/Wiktionary:Download) in XML format. (Ah, what a time to be alive! With all the enshitification going on this is such a breath of fresh air. But I digress…) I created a namespace and a table in the database with my current `tsearch2` configuration:
 
 ```sql
 CREATE SCHEMA wordlist;
@@ -58,12 +60,12 @@ And ran `extract_german_words.py` on `dewiktionary-20250920-pages-articles.xml` 
 Now itʼs time to run `german_synonym_dict_query.sql` and save the result in a synonym file:
 
 ```shell
-psql t4w -q -A -F ' ' -f german_synonym_dict_query.sql > german_plurals.syn
+psql t4w -q -A -F ' ' -t -f german_synonym_dict_query.sql > german_plurals.syn
 ```
 
 And thatʼs the file you may download above. 
 
-You must **remove** the `german_plurals` synonym dictionary from your search configuration to run that query again! Otherwise it will yield an empty result, because all your plurals will be stemmed correctly. 
+**Note:** You must remove the `german_plurals` synonym dictionary from your search configuration to run that query again! Otherwise it will yield an empty result, because all your plurals will be stemmed correctly. 
 
 On my 2017 iMac this query over 197204 rows yielding 161103 entries takes less than 3 seconds. Impressive! The resulting list is very large because the source material contains many compound nouns. Most of these are, in all probability, very low frequency. They will use up RAM on you database server with most entries seeing very little use. But hey: That server, in all likelihood, has Gigabytes of RAM and I ainʼt got no time to sort that list by word frequency. And it works fine!
 
@@ -80,3 +82,8 @@ Euren weiten Himmel droben!
 
 Yields: 'ach':1 'droben':10,31 'erde':16 'erden':16 'fest':17 'goethe':32 **'gott':3,5** 'groß':4 'gut':20,27 'gäbe':11 'himmel':9,30 'ließ':24 'mut':21 'o':22 'sinn':18 'weit':8,29 'weite':8,29 'weiten':8,29
 
+Looking at that Iʼm seeing the next problem: “gäbe,” a subjunctive, may better have been resolved to “geben,” the infinitive. 
+
+### Archaic English spellings and irregular plurals
+
+Modifying the scripts above I extracted a word list from  `enwiktionary-20250920-pages-articles.xml`. English, when it developed over the centuries, swapped the vowels around quite a bit until it found a correct spelling for many words. Incidentally, thatʼs what I do until the wiggly red line disappears under the word Iʼm typing. How to use the script and the SQL query provided, is left as exercise for the reader. 
